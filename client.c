@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include "packet.h"
 
+//change using AWS
+
 void send_data(char * filename, int sockfd, struct sockaddr_in server_addr, int server_length){
     int n;
     char buffer[MAX_LENGTH + 1];
