@@ -70,7 +70,7 @@ void send_data(char * filename, int sockfd, struct sockaddr_in server_addr, int 
 void stop_and_wait(char * filename, int sockfd, struct sockaddr_in server_addr, int server_length){
     int n, is_eof, seq_no;
     char buffer[MAX_LENGTH + 1];
-    
+    struct timeval timeout;
     bzero(buffer, MAX_LENGTH);
     FILE * fp;
     fp = fopen(filename, "r");
