@@ -7,7 +7,7 @@
 
 #ifndef PACKET_H
 #define PACKET_H
-#define MAX_LENGTH 128
+#define MAX_LENGTH 4096
 
 typedef struct packet{
     int seq_no;
