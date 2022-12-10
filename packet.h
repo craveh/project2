@@ -8,11 +8,13 @@
 #ifndef PACKET_H
 #define PACKET_H
 #define MAX_LENGTH 4096
+#define TIMEOUT 1 //in seconds
 
 typedef struct packet{
     int seq_no;
     int size;
     // int packet_type; //0-ack, 1-data, 2-FIN
+    int offset;
     int is_last_packet;
     int is_data; //1 if data, 0 if ack
     char data[MAX_LENGTH + 1];
