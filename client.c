@@ -87,7 +87,8 @@ void stop_and_wait(char * filename, int sockfd, struct sockaddr_in server_addr, 
 
     start_prog = clock();
     while(!done){
-        if (can_send){
+        // printf("Cont:\n");
+        if(can_send){
             bzero(buffer, MAX_LENGTH);
 
             read_result = fread(buffer, 1, MAX_LENGTH, fp);
@@ -126,7 +127,8 @@ void stop_and_wait(char * filename, int sockfd, struct sockaddr_in server_addr, 
         }
 
         //check if timeout
-        if (((double) clock()- sent_time) / CLOCKS_PER_SEC >TIMEOUT){
+        // printf("TIME: %f\n", ((double) clock()- sent_time) / CLOCKS_PER_SEC);
+        if (((double) clock()- sent_time) / CLOCKS_PER_SEC > TIMEOUT){
             //resend
             if(sendto(sockfd, &send_packet, sizeof(send_packet), 0, (struct sockaddr*)&server_addr, server_length) < 0){
                 error("Unable to send message\n");
@@ -135,25 +137,38 @@ void stop_and_wait(char * filename, int sockfd, struct sockaddr_in server_addr, 
             printf("[resend data] %d (%d)\n", send_packet.offset, send_packet.size);
         }
 
-        // struct timeval timeout;
+        struct timeval timeout;
         // timeout
-        // // timeout.tv_usec = 210000;
-        // if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
-        //     error("setsockopt failed\n");
-        // }
+        timeout.tv_usec = DELAY;
+        if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
+            error("setsockopt failed\n");
+        }
 
         //get ack
-        if(recvfrom(sockfd, &recv_packet, sizeof(recv_packet), 0, (struct sockaddr*)&server_addr, &server_length) < 0){
-            error("Error while receiving server's msg\n");
-        }
-        if (recv_packet.seq_no == seq_no && recv_packet.is_data == 0){
+        n = recvfrom(sockfd, &recv_packet, sizeof(recv_packet), 0, (struct sockaddr*)&server_addr, &server_length);
+        
+        // printf("N=%d\n", n);
+        if(n>0){
+            if (recv_packet.seq_no == seq_no && recv_packet.is_data == 0){
             printf("[recv ack] %d\n", recv_packet.seq_no);
             seq_no = (seq_no + 1) % 2;
             can_send = 1;
-            if(feof(fp)){
-                done = 1;
+                if(feof(fp)){
+                    done = 1;
+                }
             }
         }
+        // if(recvfrom(sockfd, &recv_packet, sizeof(recv_packet), 0, (struct sockaddr*)&server_addr, &server_length) < 0){
+        //     error("Error while receiving server's msg\n");
+        // }
+        // if (recv_packet.seq_no == seq_no && recv_packet.is_data == 0){
+        //     printf("[recv ack] %d\n", recv_packet.seq_no);
+        //     seq_no = (seq_no + 1) % 2;
+        //     can_send = 1;
+        //     if(feof(fp)){
+        //         done = 1;
+        //     }
+        // }
     }
     end_prog = clock();
     runtime = ((double)(end_prog - start_prog)) / CLOCKS_PER_SEC;
@@ -195,7 +210,7 @@ int main(int argc, char *argv[]){
 
     //set socket recv time timeout
     // timeout.tv_sec = TIMEOUT;
-    timeout.tv_usec = 500000;
+    timeout.tv_usec = DELAY;
     if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
         error("setsockopt failed\n");
     }
