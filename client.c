@@ -177,6 +177,108 @@ void stop_and_wait(char * filename, int sockfd, struct sockaddr_in server_addr, 
     printf("[completed]\n");
 }
 
+void go_back_n(char * filename, int sockfd, struct sockaddr_in server_addr, int server_length){
+    int n, buffer_head, seq_no, buffer_full, offset, done, next_recv_index;
+    char buffer[MAX_LENGTH + 1];
+    // bzero(buffer, MAX_LENGTH);
+    FILE * fp;
+    fp = fopen(filename, "r");
+    int read_result;
+    Packet send_packet, recv_packet;
+    PacketBuffer temp;
+    PacketBuffer packet_buffer[WINDOW_SIZE];
+    clock_t start_prog, end_prog, sent_time;
+    double runtime;
+
+    buffer_head = seq_no = buffer_full = offset = done = next_recv_index = 0;
+
+    start_prog = clock();
+    while(!done){
+        // printf("Cont:\n");
+        while(!buffer_full && !feof(fp)){
+            bzero(buffer, MAX_LENGTH);
+
+            read_result = fread(buffer, 1, MAX_LENGTH, fp);
+            if(ferror(fp)){
+                error("Error Reading File");
+            }
+            if(read_result == 0){
+                strcpy(buffer, "\n");
+            }
+            buffer[read_result] = '\0';
+
+            //build packet
+            send_packet.offset = offset;
+            offset += read_result; //update offset
+            send_packet.seq_no = seq_no;
+            send_packet.size = read_result;
+            send_packet.is_data = 1;
+            strcpy(send_packet.data, buffer);
+            send_packet.is_last_packet = feof(fp);
+
+            //send packet
+            if(sendto(sockfd, &send_packet, sizeof(send_packet), 0, (struct sockaddr*)&server_addr, server_length) < 0){
+                error("Unable to send message\n");
+            }
+            //save info into buffer
+            memcpy(temp.packet, &send_packet, sizeof(Packet));
+            
+            printf("[send data] %d (%d)\n", send_packet.offset, send_packet.size);
+            // resend = 0;
+        }
+
+        //check if timeout
+        // printf("TIME: %f\n", ((double) clock()- sent_time) / CLOCKS_PER_SEC);
+        if (((double) clock()- sent_time) / CLOCKS_PER_SEC > TIMEOUT){
+            //resend
+            if(sendto(sockfd, &send_packet, sizeof(send_packet), 0, (struct sockaddr*)&server_addr, server_length) < 0){
+                error("Unable to send message\n");
+            }
+            sent_time = clock(); //restart clock
+            printf("[resend data] %d (%d)\n", send_packet.offset, send_packet.size);
+        }
+
+        struct timeval timeout;
+        // timeout
+        timeout.tv_usec = DELAY;
+        if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0){
+            error("setsockopt failed\n");
+        }
+
+        //get ack
+        n = recvfrom(sockfd, &recv_packet, sizeof(recv_packet), 0, (struct sockaddr*)&server_addr, &server_length);
+        
+        // printf("N=%d\n", n);
+        if(n>0){
+            if (recv_packet.seq_no == seq_no && recv_packet.is_data == 0){
+            printf("[recv ack] %d\n", recv_packet.seq_no);
+            seq_no = (seq_no + 1) % 2;
+            can_send = 1;
+                if(feof(fp)){
+                    done = 1;
+                }
+            }
+        }
+        // if(recvfrom(sockfd, &recv_packet, sizeof(recv_packet), 0, (struct sockaddr*)&server_addr, &server_length) < 0){
+        //     error("Error while receiving server's msg\n");
+        // }
+        // if (recv_packet.seq_no == seq_no && recv_packet.is_data == 0){
+        //     printf("[recv ack] %d\n", recv_packet.seq_no);
+        //     seq_no = (seq_no + 1) % 2;
+        //     can_send = 1;
+        //     if(feof(fp)){
+        //         done = 1;
+        //     }
+        // }
+    }
+    end_prog = clock();
+    runtime = ((double)(end_prog - start_prog)) / CLOCKS_PER_SEC;
+    printf("Sent %d bytes in %f seconds.\n", offset, runtime);
+    printf("Thoughput: %f bytes per second\n", offset/runtime);
+    printf("[completed]\n");
+}
+
+
 int main(int argc, char *argv[]){
     int sockfd;
     struct sockaddr_in server_addr;
@@ -218,6 +320,7 @@ int main(int argc, char *argv[]){
     
     // send_data(argv[3], sockfd, server_addr, server_length);
     stop_and_wait(argv[3], sockfd, server_addr, server_length);
+    go_back_n(argv[3], sockfd, server_addr, server_length);
 
     close(sockfd);
     

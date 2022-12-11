@@ -10,6 +10,7 @@
 #define MAX_LENGTH 4096
 #define TIMEOUT 0.01 //in seconds
 #define DELAY 200000//in microseconds
+#define WINDOW_SIZE 5
 
 typedef struct packet{
     int seq_no;
@@ -20,6 +21,11 @@ typedef struct packet{
     int is_data; //1 if data, 0 if ack
     char data[MAX_LENGTH + 1];
 } Packet;
+
+typedef struct packet_info {
+    Packet packet;
+    int send_time;
+} PacketInfo;
 
 void error(char * error_message){
     perror(error_message);

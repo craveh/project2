@@ -135,6 +135,7 @@ int main(int argc, char *argv[]){
 
     
     close(sockfd);
+    printf("[completed]\n");
     
     return 0;
 }
