@@ -8,7 +8,9 @@
 #ifndef PACKET_H
 #define PACKET_H
 #define MAX_LENGTH 4096
-#define TIMEOUT 0.01 //in seconds
+// #define TIMEOUT 0.01 //in seconds
+#define TIMEOUT 1 //in seconds
+
 #define DELAY 200000//in microseconds
 #define WINDOW_SIZE 5
 
@@ -25,6 +27,7 @@ typedef struct packet{
 typedef struct packet_info {
     Packet packet;
     int send_time;
+    int ack_recv; //only used in Selective Repeat
 } PacketInfo;
 
 void error(char * error_message){
