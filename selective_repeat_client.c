@@ -299,7 +299,7 @@ int main(int argc, char *argv[]){
                 if(i==buffer_head && i != 0){
                     continue;
                 }
-                packet_i_info = packet_buffer[(next_recv_index + 1)%WINDOW_SIZE];
+                packet_i_info = packet_buffer[(next_recv_index + i)%WINDOW_SIZE];
                 packet_i = packet_i_info.packet;
                 if(packet_i_info.ack_recv == 1){
                     continue;

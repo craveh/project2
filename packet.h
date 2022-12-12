@@ -8,8 +8,8 @@
 #ifndef PACKET_H
 #define PACKET_H
 #define MAX_LENGTH 4096
-// #define TIMEOUT 0.01 //in seconds
-#define TIMEOUT 1 //in seconds
+#define TIMEOUT 0.01 //in seconds
+// #define TIMEOUT 1 //in seconds
 
 #define DELAY 200000//in microseconds
 #define WINDOW_SIZE 5

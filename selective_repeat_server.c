@@ -49,7 +49,7 @@ int main(int argc, char *argv[]){
 
     int n, seq_no, is_eof, next_seq_no, offset, send_ack, print;
     // char buffer[MAX_LENGTH + 1];
-    char * filename = "received_file.txt";
+    char * filename = "received_file_other.txt";
     FILE * fp = fp = fopen(filename, "w");
     Packet data_packet, ack_packet;
     Packet packet_i = {0,0,0,0,0,""};
@@ -73,6 +73,8 @@ int main(int argc, char *argv[]){
             error("Couldn't receive packet\n");
         }
 
+        printf("Data seq_no %d, next seq: %d\n", data_packet.seq_no, next_seq_no);
+
         if(data_packet.seq_no == next_seq_no){
             memcpy(&temp.packet, &data_packet, sizeof(Packet));
             temp.ack_recv = 1; //send ack
@@ -92,27 +94,51 @@ int main(int argc, char *argv[]){
             }
 
             next_seq_no = (next_seq_no +1 )%WINDOW_SIZE;
-            printf("Next seq_no: %d\n", next_seq_no);
-
-        }else{
-            for(i=0; i<WINDOW_SIZE; i++){
-                packet_i_info = packet_buffer[i];
-                if(i == data_packet.seq_no && packet_i_info.packet.offset <= data_packet.offset ){
-                    memcpy(&temp.packet, &data_packet, sizeof(Packet));
-                    temp.ack_recv = 1; //send ack
-                    packet_buffer[i] = temp; 
-                
-                    ack_packet.seq_no = seq_no;
-                    ack_packet.is_data = 0;
-                    ack_packet.is_last_packet = data_packet.is_last_packet;
-                    if (sendto(sockfd, &ack_packet, sizeof(ack_packet), 0, (struct sockaddr*)&client_addr, client_length) < 0){
-                        error("Can't send ack packet\n");
-                }
-
-                }else{
-                    printf("[recv data] %d (%d) IGNORED\n", data_packet.offset, data_packet.size);
-                }
+            //move window
+            while(packet_buffer[next_seq_no].ack_recv){
+                packet_buffer[next_seq_no].ack_recv = 0;
+                next_seq_no = (next_seq_no +1 )%WINDOW_SIZE;
+    
             }
+            // printf("Next seq_no: %d\n", next_seq_no);
+
+        }else if(packet_buffer[data_packet.seq_no].packet.offset < data_packet.offset){
+            memcpy(&temp.packet, &data_packet, sizeof(Packet));
+            temp.ack_recv = 1; //send ack
+            packet_buffer[i] = temp; 
+                
+            ack_packet.seq_no = seq_no;
+            ack_packet.is_data = 0;
+            ack_packet.is_last_packet = data_packet.is_last_packet;
+            if (sendto(sockfd, &ack_packet, sizeof(ack_packet), 0, (struct sockaddr*)&client_addr, client_length) < 0){
+                error("Can't send ack packet\n");
+            }
+            printf("[recv data] %d (%d) ACCEPTED\n", data_packet.offset, data_packet.size);
+
+            // for(i=0; i<WINDOW_SIZE; i++){
+            //     printf("In for loop\n");
+            //     packet_i_info = packet_buffer[i];
+            //     if(i == data_packet.seq_no && packet_i_info.packet.offset <= data_packet.offset ){
+            //         printf("In if in for\n");
+            //         memcpy(&temp.packet, &data_packet, sizeof(Packet));
+            //         temp.ack_recv = 1; //send ack
+            //         packet_buffer[i] = temp; 
+                
+            //         ack_packet.seq_no = seq_no;
+            //         ack_packet.is_data = 0;
+            //         ack_packet.is_last_packet = data_packet.is_last_packet;
+            //         if (sendto(sockfd, &ack_packet, sizeof(ack_packet), 0, (struct sockaddr*)&client_addr, client_length) < 0){
+            //             error("Can't send ack packet\n");
+            //         }
+            //         printf("[recv data] %d (%d) ACCEPTED\n", data_packet.offset, data_packet.size);
+
+
+            //     }else{
+            //         printf("[recv data] %d (%d) IGNORED\n", data_packet.offset, data_packet.size);
+            //     }
+            // }
+        }else{
+            printf("[recv data] %d (%d) IGNORED\n", data_packet.offset, data_packet.size);
         }
 
         
